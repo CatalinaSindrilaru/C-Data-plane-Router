@@ -1,0 +1,48 @@
+student: Sindrilaru Catalina-Maria 322 CA - 2023
+
+Homework 1 - Implementation of a Dataplane Router
+
+-> Presentation:
+The code provided is an implementation of a router that forwards packets between different interfaces.
+It uses the routing table and ARP table to identify the outgoing interface and the MAC address of the
+next hop for the destination IP address in the packet. If the MAC address is unknown, the router sends
+an ARP request to the corresponding interface and waits for a response.
+
+-> Implementation:
+In the main function, I allocated the routing table and the ARP table. For the routing table, I called
+the 'read_rtable' function. Since it was mentioned to avoid a linear search in the routing table, I
+chose to use binary search to find the best route. For this, I sorted the routing table by prefix and mask.
+Additionally, I created a queue for packets for which I don't know the MAC destination address, and for 
+which an ARP request needs to be sent.
+
+In the 'while' loop, I checked if the received packet was an IP or an ARP packet, by examining the 
+'ether_type' field in the 'ether_header'. If it was 0x0800, then it was an IP packet, and if it was 0x0806,
+then it was an ARP packet.
+
+Case 1: IP packet
+
+- Checked the checksum correctness by extracting it from the packet and then recalculating it.
+- Verified that the TTL is greater than 1, else sent an 'icmp error message' with type 11 and code 0.
+- If the message was an icmp request, responded with an 'icmp reply message' with type 0 and code 0.
+- Searched for the best route for the packet in the routing table.
+- If a route didn't exist, sent an 'icmp error message' with type 3 and code 0.
+- Searched for the new MAC destination address of the packet in the ARP table.
+- If the MAC address existed, modified the source and destination MAC addresses and sent the packet.
+- If the MAC didn't exist, put the packet in the queue and sent an ARP request to find the MAC address 
+of the next hop.
+
+Case 2: ARP packet
+
+- Checked if it was an ARP request for the router. In this case, someone needed to know the MAC address of
+the router, so the router sent back an ARP reply containing its address.
+- Checked if it was an ARP reply for the router. In this case, the source MAC address and IP address were
+extracted from the packet and added to the ARP table as a new entry. Since packets may be waiting in the queue
+for this new entry in the ARP table, I went through the queue and resent the packets that matched this new entry.
+
+Notes:
+
+- I created a 'send_icmp' function that completes all fields in the 'ether_header', 'ip_header', and 'icmp_header'
+with the given address and the appropriate type and code for the icmp message, and then sends the new packet.
+
+- I created a 'send_arp_request' function that completes the fields in the 'ether_header' and 'arp_header',
+ and then sends the new packet.
